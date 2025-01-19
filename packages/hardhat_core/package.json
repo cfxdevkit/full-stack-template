@@ -1,0 +1,20 @@
+{
+  "name": "hardhat_core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@civex/hardhat-cive": "^0.0.1",
+    "cive": "^0.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2",
+    "hardhat": "^2.22.18",
+    "viem": "^2.22.9"
+  }
+}

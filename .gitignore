@@ -1,0 +1,37 @@
+# Dependencies and package management
+node_modules
+.pnpm-store
+
+# Hardhat files
+cache
+artifacts
+typechain
+typechain-types
+coverage
+coverage.json
+
+# Vite and frontend
+dist
+dist-ssr
+*.local
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Build and temp folders
+.turbo
+build
+out
