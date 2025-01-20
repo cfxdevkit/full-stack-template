@@ -5,6 +5,7 @@ node_modules
 # Hardhat files
 cache
 artifacts
+deployments
 typechain
 typechain-types
 coverage

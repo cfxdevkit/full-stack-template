@@ -3,6 +3,7 @@ import { vars } from "hardhat/config";
 
 import "@nomicfoundation/hardhat-ignition-viem";
 import "@nomicfoundation/hardhat-toolbox-viem";
+import "solidity-docgen";
 
 import "./tasks"
 
@@ -68,6 +69,14 @@ const config: HardhatUserConfig = {
       },
     },
   },
+  docgen: {
+    outputDir: 'docs',
+    pages: 'single',
+    exclude: ['node_modules'],
+    theme: 'markdown',
+    pageExtension: '.md',
+    collapseNewlines: true,
+  }
 };
 
 

@@ -1,16 +1,23 @@
-import { coinbaseWallet, injected, walletConnect } from '@wagmi/connectors'
+import { injected } from '@wagmi/connectors'
 import { http, createConfig } from '@wagmi/core'
-import { mainnet, sepolia } from '@wagmi/core/chains'
+import { confluxESpace, confluxESpaceTestnet } from '@wagmi/core/chains'
+import { type Chain } from 'viem'
+
+export const localChain = {
+  id: 2030,
+  name: 'Conflux ESpace Local',
+  nativeCurrency: { name: 'Conflux', symbol: 'CFX', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['http://localhost:8545'] },
+  },
+} as const satisfies Chain
 
 export const config = createConfig({
-  chains: [mainnet, sepolia],
-  connectors: [
-    injected(),
-    coinbaseWallet(),
-    walletConnect({ projectId: import.meta.env.VITE_WC_PROJECT_ID }),
-  ],
+  chains: [localChain, confluxESpace, confluxESpaceTestnet],
+  connectors: [injected()],
   transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: http(),
+    [localChain.id]: http(),
+    [confluxESpace.id]: http(),
+    [confluxESpaceTestnet.id]: http(),
   },
 })

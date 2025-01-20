@@ -1,16 +1,137 @@
 import { Buffer } from 'buffer'
-import { connect, disconnect, reconnect, watchAccount } from '@wagmi/core'
+import { connect, disconnect, reconnect, watchAccount, getAccount, switchChain } from '@wagmi/core'
+import {
+  readBasicCounterGetCount,
+  writeBasicCounterIncrement,
+  writeBasicCounterDecrement,
+  readDataTypesDemoGetFlag,
+  writeDataTypesDemoToggleFlag,
+  readDataTypesDemoText,
+  readLockUnlockTime,
+  writeLockWithdraw,
+  watchBasicCounterCountChangedEvent,
+  watchDataTypesDemoPersonAddedEvent,
+  readLockOwner
+} from './generated'
+import { contractAddresses } from './generated-addresses'
+import { localChain } from './wagmi'
 
 import './style.css'
 import { config } from './wagmi'
 
 globalThis.Buffer = Buffer
 
+// Function to handle error messages
+function showError(message: string) {
+  const container = document.querySelector<HTMLDivElement>('#error-container')!
+  const messagesDiv = document.querySelector<HTMLDivElement>('#error-messages')!
+  
+  const errorDiv = document.createElement('div')
+  errorDiv.className = 'error-message'
+  
+  const messageSpan = document.createElement('span')
+  messageSpan.textContent = message
+  
+  const closeButton = document.createElement('button')
+  closeButton.innerHTML = '×'
+  closeButton.onclick = () => {
+    errorDiv.remove()
+    // Hide container if no more errors
+    if (messagesDiv.children.length === 0) {
+      container.classList.remove('visible')
+    }
+  }
+  
+  errorDiv.appendChild(messageSpan)
+  errorDiv.appendChild(closeButton)
+  messagesDiv.appendChild(errorDiv)
+  container.classList.add('visible')
+
+  // Optional: Auto-hide after 5 seconds
+  setTimeout(() => closeButton.click(), 5000)
+}
+
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
+    <style>
+      .status-line {
+        margin: 8px 0;
+      }
+      .status-value {
+        font-weight: bold;
+      }
+      .status-tag {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        font-size: 0.9em;
+      }
+      .status-locked {
+        background-color: #ffebee;
+        color: #c62828;
+      }
+      .status-unlocked {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+      }
+      .status-owner {
+        background-color: #e3f2fd;
+        color: #1565c0;
+      }
+      .time-remaining {
+        color: #f57c00;
+        margin-top: 8px;
+        font-style: italic;
+      }
+      .wrong-network {
+        background-color: #fff3e0;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 16px 0;
+        border: 1px solid #ffe0b2;
+      }
+      .wrong-network button {
+        margin-top: 8px;
+      }
+      #contracts {
+        display: none;
+      }
+      #contracts.visible {
+        display: block;
+      }
+      .error-container {
+        margin: 16px 0;
+        display: none;
+      }
+      .error-container.visible {
+        display: block;
+      }
+      .error-message {
+        background-color: #ffebee;
+        color: #c62828;
+        padding: 12px;
+        border-radius: 4px;
+        border: 1px solid #ef9a9a;
+        margin: 8px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .error-message button {
+        background: none;
+        border: none;
+        color: #c62828;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 0 8px;
+      }
+      .error-message button:hover {
+        opacity: 0.8;
+      }
+    </style>
     <div id="account">
       <h2>Account</h2>
-
       <div>
         status:
         <br />
@@ -29,13 +150,238 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         )
         .join('')}
     </div>
+
+    <div id="error-container" class="error-container">
+      <h3>Errors</h3>
+      <div id="error-messages"></div>
+    </div>
+
+    <div id="network-warning" style="display: none;">
+      <div class="wrong-network">
+        <h3>Wrong Network</h3>
+        <p>Please connect to the local Conflux eSpace network to interact with the contracts.</p>
+        <button id="switch-network">Switch to Local Network</button>
+      </div>
+    </div>
+
+    <div id="contracts">
+      <h2>Contract Interactions</h2>
+      
+      <div id="basicCounter">
+        <h3>Basic Counter</h3>
+        <div>Count: <span id="counterValue">-</span></div>
+        <button id="increment">Increment</button>
+        <button id="decrement">Decrement</button>
+      </div>
+
+      <div id="dataTypesDemo">
+        <h3>Data Types Demo</h3>
+        <div>Flag: <span id="flagValue">-</span></div>
+        <div>Text: <span id="textValue">-</span></div>
+        <button id="toggleFlag">Toggle Flag</button>
+      </div>
+
+      <div id="lock">
+        <h3>Lock Contract</h3>
+        <div>Unlock Time: <span id="unlockTime">-</span></div>
+        <button id="withdraw">Withdraw</button>
+      </div>
+    </div>
   </div>
 `
 
 setupApp(document.querySelector<HTMLDivElement>('#app')!)
 
+async function updateContractData() {
+  try {
+    // Update Basic Counter
+    const count = await readBasicCounterGetCount(config, {
+      address: contractAddresses.BasicCounter
+    })
+    document.querySelector('#counterValue')!.textContent = count.toString()
+
+    // Update Data Types Demo
+    const flag = await readDataTypesDemoGetFlag(config, {
+      address: contractAddresses.DataTypesDemo
+    })
+    document.querySelector('#flagValue')!.textContent = flag.toString()
+
+    const text = await readDataTypesDemoText(config, {
+      address: contractAddresses.DataTypesDemo
+    })
+    document.querySelector('#textValue')!.textContent = text.toString()
+
+    // Update Lock
+    const unlockTime = await readLockUnlockTime(config, {
+      address: contractAddresses.Lock
+    })
+    const currentTime = Math.floor(Date.now() / 1000)
+    const isUnlocked = currentTime >= Number(unlockTime)
+    
+    const owner = await readLockOwner(config, {
+      address: contractAddresses.Lock
+    })
+    const account = getAccount(config)
+    const isOwner = account.address?.toLowerCase() === owner.toLowerCase()
+    
+    const formattedUnlockTime = new Date(Number(unlockTime) * 1000).toLocaleString()
+    let statusHtml = `
+      <div class="status-line">
+        <span>Unlock Time:</span>
+        <span class="status-value">${formattedUnlockTime}</span>
+        <span class="status-tag ${isUnlocked ? 'status-unlocked' : 'status-locked'}">
+          ${isUnlocked ? 'Unlocked' : 'Locked'}
+        </span>
+      </div>
+      <div class="status-line">
+        <span>Owner:</span>
+        <span class="status-value">${owner}</span>
+        <span class="status-tag status-owner">
+          ${isOwner ? 'You are the owner' : 'You are not the owner'}
+        </span>
+      </div>
+    `
+
+    // Add time remaining if locked
+    if (!isUnlocked) {
+      const timeLeft = Number(unlockTime) - currentTime
+      const hoursLeft = Math.floor(timeLeft / 3600)
+      const minutesLeft = Math.floor((timeLeft % 3600) / 60)
+      statusHtml += `
+        <div class="time-remaining">
+          Time remaining: ${hoursLeft}h ${minutesLeft}m
+        </div>
+      `
+    }
+
+    document.querySelector('#unlockTime')!.innerHTML = statusHtml
+  } catch (error) {
+    console.error('Error updating contract data:', error)
+  }
+}
+
+function setupEventListeners() {
+  // Watch for BasicCounter events
+  const unsubscribeCounter = watchBasicCounterCountChangedEvent(config, {
+    address: contractAddresses.BasicCounter,
+    onLogs: async (logs) => {
+      // Update counter value when event is received
+      const newCount = logs[0]?.args?.newCount
+      if (typeof newCount === 'bigint') {
+        document.querySelector('#counterValue')!.textContent = newCount.toString()
+      }
+    }
+  })
+
+  // Watch for DataTypesDemo events
+  const unsubscribeDataTypes = watchDataTypesDemoPersonAddedEvent(config, {
+    address: contractAddresses.DataTypesDemo,
+    onLogs: async () => {
+      // Since there's no direct event for flag changes, we'll fetch the current state
+      const flag = await readDataTypesDemoGetFlag(config, {
+        address: contractAddresses.DataTypesDemo
+      })
+      document.querySelector('#flagValue')!.textContent = flag.toString()
+    }
+  })
+
+  return () => {
+    unsubscribeCounter()
+    unsubscribeDataTypes()
+  }
+}
+
 function setupApp(element: HTMLDivElement) {
-  const connectElement = element.querySelector<HTMLDivElement>('#connect')
+  let unsubscribeEvents: (() => void) | undefined
+
+  // Setup network switch button
+  element.querySelector('#switch-network')?.addEventListener('click', async () => {
+    try {
+      await switchChain(config, { chainId: localChain.id })
+    } catch (error) {
+      console.error('Error switching network:', error)
+      showError('Failed to switch network: ' + (error as Error).message)
+    }
+  })
+
+  // Setup contract interactions
+  element.querySelector('#increment')?.addEventListener('click', async () => {
+    try {
+      await writeBasicCounterIncrement(config, {
+        address: contractAddresses.BasicCounter
+      })
+    } catch (error) {
+      console.error('Error incrementing:', error)
+      showError('Failed to increment counter: ' + (error as Error).message)
+    }
+  })
+
+  element.querySelector('#decrement')?.addEventListener('click', async () => {
+    try {
+      await writeBasicCounterDecrement(config, {
+        address: contractAddresses.BasicCounter
+      })
+    } catch (error) {
+      console.error('Error decrementing:', error)
+      showError('Failed to decrement counter: ' + (error as Error).message)
+    }
+  })
+
+  element.querySelector('#toggleFlag')?.addEventListener('click', async () => {
+    try {
+      await writeDataTypesDemoToggleFlag(config, {
+        address: contractAddresses.DataTypesDemo
+      })
+      // Since there's no direct event for flag toggle, we'll fetch the new state
+      const flag = await readDataTypesDemoGetFlag(config, {
+        address: contractAddresses.DataTypesDemo
+      })
+      document.querySelector('#flagValue')!.textContent = flag.toString()
+    } catch (error) {
+      console.error('Error toggling flag:', error)
+      showError('Failed to toggle flag: ' + (error as Error).message)
+    }
+  })
+
+  element.querySelector('#withdraw')?.addEventListener('click', async () => {
+    try {
+      // Check conditions before attempting withdrawal
+      const unlockTime = await readLockUnlockTime(config, {
+        address: contractAddresses.Lock
+      })
+      const currentTime = Math.floor(Date.now() / 1000)
+      if (currentTime < Number(unlockTime)) {
+        const timeLeft = Number(unlockTime) - currentTime
+        const hoursLeft = Math.floor(timeLeft / 3600)
+        const minutesLeft = Math.floor((timeLeft % 3600) / 60)
+        const message = `Cannot withdraw: Lock time has not expired yet. Time remaining: ${hoursLeft}h ${minutesLeft}m`
+        console.error(message)
+        showError(message)
+        return
+      }
+
+      const owner = await readLockOwner(config, {
+        address: contractAddresses.Lock
+      })
+      const account = getAccount(config)
+      if (!account.address || account.address.toLowerCase() !== owner.toLowerCase()) {
+        const message = `Cannot withdraw: You are not the owner. Owner is ${owner}`
+        console.error(message)
+        showError(message)
+        return
+      }
+
+      await writeLockWithdraw(config, {
+        address: contractAddresses.Lock
+      })
+      await updateContractData()
+    } catch (error) {
+      console.error('Error withdrawing:', error)
+      showError('Failed to withdraw: ' + (error as Error).message)
+    }
+  })
+
+  // const connectElement = element.querySelector<HTMLDivElement>('#connect')
   const buttons = element.querySelectorAll<HTMLButtonElement>('.connect')
   for (const button of buttons) {
     const connector = config.connectors.find(
@@ -43,14 +389,9 @@ function setupApp(element: HTMLDivElement) {
     )!
     button.addEventListener('click', async () => {
       try {
-        const errorElement = element.querySelector<HTMLDivElement>('#error')
-        if (errorElement) errorElement.remove()
         await connect(config, { connector })
       } catch (error) {
-        const errorElement = document.createElement('div')
-        errorElement.id = 'error'
-        errorElement.innerText = (error as Error).message
-        connectElement?.appendChild(errorElement)
+        showError('Failed to connect: ' + (error as Error).message)
       }
     })
   }
@@ -58,6 +399,9 @@ function setupApp(element: HTMLDivElement) {
   watchAccount(config, {
     onChange(account) {
       const accountElement = element.querySelector<HTMLDivElement>('#account')!
+      const contractsElement = element.querySelector<HTMLDivElement>('#contracts')!
+      const networkWarningElement = element.querySelector<HTMLDivElement>('#network-warning')!
+
       accountElement.innerHTML = `
         <h2>Account</h2>
         <div>
@@ -76,10 +420,40 @@ function setupApp(element: HTMLDivElement) {
         }
       `
 
+      // Handle network validation and UI visibility
+      if (account.status === 'connected') {
+        if (account.chainId === localChain.id) {
+          // Correct network
+          contractsElement.classList.add('visible')
+          networkWarningElement.style.display = 'none'
+          updateContractData()
+          unsubscribeEvents = setupEventListeners()
+        } else {
+          // Wrong network
+          contractsElement.classList.remove('visible')
+          networkWarningElement.style.display = 'block'
+        }
+      } else {
+        // Not connected
+        contractsElement.classList.remove('visible')
+        networkWarningElement.style.display = 'none'
+        if (unsubscribeEvents) {
+          unsubscribeEvents()
+          unsubscribeEvents = undefined
+        }
+      }
+
       const disconnectButton =
         element.querySelector<HTMLButtonElement>('#disconnect')
       if (disconnectButton)
-        disconnectButton.addEventListener('click', () => disconnect(config))
+        disconnectButton.addEventListener('click', () => {
+          disconnect(config)
+          // Cleanup event listeners when disconnecting
+          if (unsubscribeEvents) {
+            unsubscribeEvents()
+            unsubscribeEvents = undefined
+          }
+        })
     },
   })
 

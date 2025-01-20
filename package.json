@@ -4,7 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "turbo run clean && rm -rf node_modules && rm -rf .pnpm-store",
+    "node": "deno --allow-env --allow-read --allow-write --allow-ffi --allow-net=127.0.0.1 /opt/conflux/src/cli.ts start",
+    "frontend": "cd packages/frontend && pnpm dev --host",
+    "dev": "tmux new-session -d -s dev 'pnpm frontend' && tmux split-window -v 'pnpm node' && tmux -2 attach-session -t dev",
+    "dev:stop": "tmux kill-session -t dev"
   },
   "keywords": [],
   "author": "",
