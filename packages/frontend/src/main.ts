@@ -15,13 +15,16 @@ import {
 } from './generated'
 import { contractAddresses } from './generated-addresses'
 import { localChain } from './wagmi'
-
 import './style.css'
 import { config } from './wagmi'
 
+// Required for web3 functionality
 globalThis.Buffer = Buffer
 
-// Function to handle error messages
+/**
+ * Displays an error message in a toast-like notification
+ * that automatically disappears after 5 seconds
+ */
 function showError(message: string) {
   const container = document.querySelector<HTMLDivElement>('#error-container')!
   const messagesDiv = document.querySelector<HTMLDivElement>('#error-messages')!
@@ -47,89 +50,13 @@ function showError(message: string) {
   messagesDiv.appendChild(errorDiv)
   container.classList.add('visible')
 
-  // Optional: Auto-hide after 5 seconds
+  // Auto-hide after 5 seconds
   setTimeout(() => closeButton.click(), 5000)
 }
 
+// Initialize the main app HTML structure
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
-    <style>
-      .status-line {
-        margin: 8px 0;
-      }
-      .status-value {
-        font-weight: bold;
-      }
-      .status-tag {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin-left: 8px;
-        font-size: 0.9em;
-      }
-      .status-locked {
-        background-color: #ffebee;
-        color: #c62828;
-      }
-      .status-unlocked {
-        background-color: #e8f5e9;
-        color: #2e7d32;
-      }
-      .status-owner {
-        background-color: #e3f2fd;
-        color: #1565c0;
-      }
-      .time-remaining {
-        color: #f57c00;
-        margin-top: 8px;
-        font-style: italic;
-      }
-      .wrong-network {
-        background-color: #fff3e0;
-        padding: 16px;
-        border-radius: 8px;
-        margin: 16px 0;
-        border: 1px solid #ffe0b2;
-      }
-      .wrong-network button {
-        margin-top: 8px;
-      }
-      #contracts {
-        display: none;
-      }
-      #contracts.visible {
-        display: block;
-      }
-      .error-container {
-        margin: 16px 0;
-        display: none;
-      }
-      .error-container.visible {
-        display: block;
-      }
-      .error-message {
-        background-color: #ffebee;
-        color: #c62828;
-        padding: 12px;
-        border-radius: 4px;
-        border: 1px solid #ef9a9a;
-        margin: 8px 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .error-message button {
-        background: none;
-        border: none;
-        color: #c62828;
-        cursor: pointer;
-        font-size: 18px;
-        padding: 0 8px;
-      }
-      .error-message button:hover {
-        opacity: 0.8;
-      }
-    </style>
     <div id="account">
       <h2>Account</h2>
       <div>
@@ -192,6 +119,10 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 
 setupApp(document.querySelector<HTMLDivElement>('#app')!)
 
+/**
+ * Updates all contract data displayed in the UI
+ * This includes the counter value, flag status, and lock status
+ */
 async function updateContractData() {
   try {
     // Update Basic Counter
@@ -211,7 +142,7 @@ async function updateContractData() {
     })
     document.querySelector('#textValue')!.textContent = text.toString()
 
-    // Update Lock
+    // Update Lock Contract Status
     const unlockTime = await readLockUnlockTime(config, {
       address: contractAddresses.Lock
     })
@@ -260,6 +191,10 @@ async function updateContractData() {
   }
 }
 
+/**
+ * Sets up blockchain event listeners for real-time updates
+ * Returns a cleanup function to remove the listeners
+ */
 function setupEventListeners() {
   // Watch for BasicCounter events
   const unsubscribeCounter = watchBasicCounterCountChangedEvent(config, {
@@ -291,6 +226,10 @@ function setupEventListeners() {
   }
 }
 
+/**
+ * Main application setup function
+ * Handles all event listeners and UI updates
+ */
 function setupApp(element: HTMLDivElement) {
   let unsubscribeEvents: (() => void) | undefined
 
@@ -304,7 +243,7 @@ function setupApp(element: HTMLDivElement) {
     }
   })
 
-  // Setup contract interactions
+  // Setup contract interaction buttons
   element.querySelector('#increment')?.addEventListener('click', async () => {
     try {
       await writeBasicCounterIncrement(config, {
@@ -381,7 +320,7 @@ function setupApp(element: HTMLDivElement) {
     }
   })
 
-  // const connectElement = element.querySelector<HTMLDivElement>('#connect')
+  // Setup wallet connection buttons
   const buttons = element.querySelectorAll<HTMLButtonElement>('.connect')
   for (const button of buttons) {
     const connector = config.connectors.find(
@@ -396,12 +335,14 @@ function setupApp(element: HTMLDivElement) {
     })
   }
 
+  // Watch for account changes and update UI accordingly
   watchAccount(config, {
     onChange(account) {
       const accountElement = element.querySelector<HTMLDivElement>('#account')!
       const contractsElement = element.querySelector<HTMLDivElement>('#contracts')!
       const networkWarningElement = element.querySelector<HTMLDivElement>('#network-warning')!
 
+      // Update account information display
       accountElement.innerHTML = `
         <h2>Account</h2>
         <div>
@@ -443,6 +384,7 @@ function setupApp(element: HTMLDivElement) {
         }
       }
 
+      // Setup disconnect button
       const disconnectButton =
         element.querySelector<HTMLButtonElement>('#disconnect')
       if (disconnectButton)
@@ -457,6 +399,7 @@ function setupApp(element: HTMLDivElement) {
     },
   })
 
+  // Initial connection attempt
   reconnect(config)
     .then(() => {})
     .catch(() => {})

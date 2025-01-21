@@ -19,3 +19,98 @@
     color: #181818;
   }
 }
+
+/* Status indicators and tags */
+.status-line {
+  margin: 8px 0;
+}
+
+.status-value {
+  font-weight: bold;
+}
+
+.status-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  font-size: 0.9em;
+}
+
+.status-locked {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-unlocked {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-owner {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.time-remaining {
+  color: #f57c00;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* Network warning component */
+.wrong-network {
+  background-color: #fff3e0;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  border: 1px solid #ffe0b2;
+}
+
+.wrong-network button {
+  margin-top: 8px;
+}
+
+/* Contracts section visibility */
+#contracts {
+  display: none;
+}
+
+#contracts.visible {
+  display: block;
+}
+
+/* Error handling styles */
+.error-container {
+  margin: 16px 0;
+  display: none;
+}
+
+.error-container.visible {
+  display: block;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #ef9a9a;
+  margin: 8px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-message button {
+  background: none;
+  border: none;
+  color: #c62828;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 8px;
+}
+
+.error-message button:hover {
+  opacity: 0.8;
+}
