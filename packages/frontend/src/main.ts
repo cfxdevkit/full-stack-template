@@ -14,7 +14,9 @@ import {
   readLockOwner
 } from './generated'
 import { contractAddresses } from './generated-addresses'
-import { localChain } from './wagmi'
+import { mountChainSelector } from './ui/chainSelector'
+import { getSelectedChainId, subscribeChainChanged } from './chain'
+// ...existing code...
 import './style.css'
 import { config } from './wagmi'
 
@@ -117,6 +119,58 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   </div>
 `
 
+const appEl = document.querySelector<HTMLDivElement>('#app')!
+mountChainSelector(appEl)
+
+// helper to get address for current chain (reads selected chain id)
+function getAddress(contractName: keyof typeof contractAddresses[71]) {
+  // prefer chain.ts canonical value so selector (DOM or React) and code agree
+  const chainId = getSelectedChainId()
+  // contractAddresses keys are string numbers
+  // @ts-ignore
+  return contractAddresses[String(chainId)]?.[contractName] || '0x0000000000000000000000000000000000000000'
+}
+
+// Keep track of the currently selected chain and react to changes
+let expectedChainId = getSelectedChainId()
+
+function handleSelectedChainChange(newId: number) {
+  expectedChainId = newId
+  // update UI visibility/state based on current account
+  const account = getAccount(config)
+  // reuse the same UI update logic by invoking the watchAccount onChange handler manually
+  // Build a minimal account-like object
+  const accLike = {
+    status: account.status,
+    addresses: account.addresses,
+    address: account.address,
+    chainId: account.chainId,
+  }
+  // Trigger the same UI update by calling the watchAccount onChange callback if possible
+  // We'll call the same logic path by invoking the watchAccount handler indirectly via dispatch
+  // Simpler: if connected and on correct chain, refresh contract data and re-subscribe events
+  if (accLike.status === 'connected') {
+    if (accLike.chainId === expectedChainId) {
+      ;(document.querySelector('#contracts') as HTMLElement).classList.add('visible')
+      ;(document.querySelector('#network-warning') as HTMLElement).style.display = 'none'
+      updateContractData()
+    } else {
+      ;(document.querySelector('#contracts') as HTMLElement).classList.remove('visible')
+      ;(document.querySelector('#network-warning') as HTMLElement).style.display = 'block'
+    }
+  }
+}
+
+subscribeChainChanged((e: Event) => {
+  // @ts-ignore
+  const id = (e as CustomEvent).detail as number
+  handleSelectedChainChange(id)
+})
+
+// initialize
+handleSelectedChainChange(expectedChainId)
+
+// For compatibility keep calling setupApp
 setupApp(document.querySelector<HTMLDivElement>('#app')!)
 
 /**
@@ -127,30 +181,30 @@ async function updateContractData() {
   try {
     // Update Basic Counter
     const count = await readBasicCounterGetCount(config, {
-      address: contractAddresses.BasicCounter
+      address: getAddress('BasicCounter')
     })
     document.querySelector('#counterValue')!.textContent = count.toString()
 
     // Update Data Types Demo
     const flag = await readDataTypesDemoGetFlag(config, {
-      address: contractAddresses.DataTypesDemo
+      address: getAddress('DataTypesDemo')
     })
     document.querySelector('#flagValue')!.textContent = flag.toString()
 
     const text = await readDataTypesDemoText(config, {
-      address: contractAddresses.DataTypesDemo
+      address: getAddress('DataTypesDemo')
     })
     document.querySelector('#textValue')!.textContent = text.toString()
 
     // Update Lock Contract Status
     const unlockTime = await readLockUnlockTime(config, {
-      address: contractAddresses.Lock
+      address: getAddress('Lock')
     })
     const currentTime = Math.floor(Date.now() / 1000)
     const isUnlocked = currentTime >= Number(unlockTime)
     
     const owner = await readLockOwner(config, {
-      address: contractAddresses.Lock
+      address: getAddress('Lock')
     })
     const account = getAccount(config)
     const isOwner = account.address?.toLowerCase() === owner.toLowerCase()
@@ -198,7 +252,7 @@ async function updateContractData() {
 function setupEventListeners() {
   // Watch for BasicCounter events
   const unsubscribeCounter = watchBasicCounterCountChangedEvent(config, {
-    address: contractAddresses.BasicCounter,
+    address: getAddress('BasicCounter'),
     onLogs: async (logs) => {
       // Update counter value when event is received
       const newCount = logs[0]?.args?.newCount
@@ -210,11 +264,11 @@ function setupEventListeners() {
 
   // Watch for DataTypesDemo events
   const unsubscribeDataTypes = watchDataTypesDemoPersonAddedEvent(config, {
-    address: contractAddresses.DataTypesDemo,
+    address: getAddress('DataTypesDemo'),
     onLogs: async () => {
       // Since there's no direct event for flag changes, we'll fetch the current state
       const flag = await readDataTypesDemoGetFlag(config, {
-        address: contractAddresses.DataTypesDemo
+        address: getAddress('DataTypesDemo')
       })
       document.querySelector('#flagValue')!.textContent = flag.toString()
     }
@@ -236,7 +290,7 @@ function setupApp(element: HTMLDivElement) {
   // Setup network switch button
   element.querySelector('#switch-network')?.addEventListener('click', async () => {
     try {
-      await switchChain(config, { chainId: localChain.id })
+  await switchChain(config, { chainId: getSelectedChainId() as 71 | 1030 | 2030 })
     } catch (error) {
       console.error('Error switching network:', error)
       showError('Failed to switch network: ' + (error as Error).message)
@@ -247,7 +301,7 @@ function setupApp(element: HTMLDivElement) {
   element.querySelector('#increment')?.addEventListener('click', async () => {
     try {
       await writeBasicCounterIncrement(config, {
-        address: contractAddresses.BasicCounter
+        address: getAddress('BasicCounter')
       })
     } catch (error) {
       console.error('Error incrementing:', error)
@@ -258,7 +312,7 @@ function setupApp(element: HTMLDivElement) {
   element.querySelector('#decrement')?.addEventListener('click', async () => {
     try {
       await writeBasicCounterDecrement(config, {
-        address: contractAddresses.BasicCounter
+        address: getAddress('BasicCounter')
       })
     } catch (error) {
       console.error('Error decrementing:', error)
@@ -269,11 +323,11 @@ function setupApp(element: HTMLDivElement) {
   element.querySelector('#toggleFlag')?.addEventListener('click', async () => {
     try {
       await writeDataTypesDemoToggleFlag(config, {
-        address: contractAddresses.DataTypesDemo
+        address: getAddress('DataTypesDemo')
       })
       // Since there's no direct event for flag toggle, we'll fetch the new state
       const flag = await readDataTypesDemoGetFlag(config, {
-        address: contractAddresses.DataTypesDemo
+        address: getAddress('DataTypesDemo')
       })
       document.querySelector('#flagValue')!.textContent = flag.toString()
     } catch (error) {
@@ -286,7 +340,7 @@ function setupApp(element: HTMLDivElement) {
     try {
       // Check conditions before attempting withdrawal
       const unlockTime = await readLockUnlockTime(config, {
-        address: contractAddresses.Lock
+        address: getAddress('Lock')
       })
       const currentTime = Math.floor(Date.now() / 1000)
       if (currentTime < Number(unlockTime)) {
@@ -300,7 +354,7 @@ function setupApp(element: HTMLDivElement) {
       }
 
       const owner = await readLockOwner(config, {
-        address: contractAddresses.Lock
+        address: getAddress('Lock')
       })
       const account = getAccount(config)
       if (!account.address || account.address.toLowerCase() !== owner.toLowerCase()) {
@@ -311,7 +365,7 @@ function setupApp(element: HTMLDivElement) {
       }
 
       await writeLockWithdraw(config, {
-        address: contractAddresses.Lock
+        address: getAddress('Lock')
       })
       await updateContractData()
     } catch (error) {
@@ -363,7 +417,7 @@ function setupApp(element: HTMLDivElement) {
 
       // Handle network validation and UI visibility
       if (account.status === 'connected') {
-        if (account.chainId === localChain.id) {
+  if (account.chainId === expectedChainId) {
           // Correct network
           contractsElement.classList.add('visible')
           networkWarningElement.style.display = 'none'

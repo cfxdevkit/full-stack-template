@@ -22,16 +22,16 @@ const config: HardhatUserConfig = {
         network: "confluxESpace",
         chainId: 1030,
         urls: {
-          apiURL: "https://evmapi.confluxscan.net",
-          browserURL: "https://evm.confluxscan.io/",
+          apiURL: "https://evmapi.confluxscan.org",
+          browserURL: "https://evm.confluxscan.org/",
         },
       },
       {
         network: "confluxESpaceTestnet",
         chainId: 71,
         urls: {
-          apiURL: "https://evmapi-testnet.confluxscan.io/api/",
-          browserURL: "https://evmtestnet.confluxscan.io/",
+          apiURL: "https://evmapi-testnet.confluxscan.org/api/",
+          browserURL: "https://evmtestnet.confluxscan.org/",
         },
       },
     ],

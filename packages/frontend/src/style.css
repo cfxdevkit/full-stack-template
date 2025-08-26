@@ -15,7 +15,7 @@
 
 @media (prefers-color-scheme: light) {
   :root {
-    background-color: #f8f8f8;
+    background-color: #dd8080;
     color: #181818;
   }
 }
@@ -60,11 +60,11 @@
 
 /* Network warning component */
 .wrong-network {
-  background-color: #fff3e0;
+  background-color: #cc9742;
   padding: 16px;
   border-radius: 8px;
   margin: 16px 0;
-  border: 1px solid #ffe0b2;
+  border: 1px solid #754905;
 }
 
 .wrong-network button {
