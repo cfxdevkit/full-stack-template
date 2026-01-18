@@ -16,9 +16,9 @@
   "license": "ISC",
   "packageManager": "pnpm@9.1.0",
   "devDependencies": {
-    "turbo": "^2.6.1"
-  }
-  ,"pnpm": {
+    "turbo": "^2.7.5"
+  },
+  "pnpm": {
     "overrides": {
       "ws": "8.17.1",
       "esbuild": "0.25.0",
@@ -26,9 +26,9 @@
       "cookie": "0.7.0",
       "@metamask/sdk": "0.33.1",
       "@metamask/sdk-communication-layer": "0.33.1",
-      "debug": "4.4.3"
-        ,"js-yaml": "4.1.1",
-        "tmp": "0.2.4"
+      "debug": "4.4.3",
+      "js-yaml": "4.1.1",
+      "tmp": "0.2.4"
     }
   }
 }
