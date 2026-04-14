@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "pnpm --filter frontend build",
+    "test": "pnpm --filter hardhat_espace test && pnpm --filter frontend build",
     "clean": "turbo run clean && rm -rf node_modules && rm -rf .pnpm-store",
     "node": "deno --allow-env --allow-read --allow-write --allow-ffi --allow-net=127.0.0.1 /opt/conflux/src/cli.ts start",
     "frontend": "cd packages/frontend && pnpm dev --host",
@@ -16,7 +17,7 @@
   "license": "ISC",
   "packageManager": "pnpm@9.1.0",
   "devDependencies": {
-    "turbo": "^2.7.5"
+    "turbo": "^2.9.6"
   },
   "pnpm": {
     "overrides": {
