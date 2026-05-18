@@ -7,7 +7,7 @@ import "solidity-docgen";
 
 import "./tasks"
 
-const deployer_mnemonic = vars.get("DEPLOYER_MNEMONIC")
+const deployer_mnemonic = process.env.DEPLOYER_MNEMONIC ?? "test test test test test test test test test test test junk"
 
 const config: HardhatUserConfig = {
   solidity: "0.8.28",
